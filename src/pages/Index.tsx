@@ -1,8 +1,34 @@
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { AuthModal } from '@/components/AuthModal';
+import { authService, User } from '@/lib/auth';
+import { Toaster } from '@/components/ui/sonner';
 
 const Index = () => {
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const result = await authService.verify();
+      if (result?.valid) {
+        setUser(result.user);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const handleAuthSuccess = () => {
+    const currentUser = authService.getUser();
+    setUser(currentUser);
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setUser(null);
+  };
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
@@ -11,7 +37,18 @@ const Index = () => {
             <Icon name="Flame" className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold text-foreground">СПАРКОМ</span>
           </div>
-          <Button variant="ghost" size="sm">Написать организатору</Button>
+          {user ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground hidden md:inline">{user.full_name}</span>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                Выйти
+              </Button>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setShowAuthModal(true)}>
+              Войти
+            </Button>
+          )}
         </div>
       </header>
 
@@ -123,7 +160,7 @@ const Index = () => {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="text-lg">
+                <Button size="lg" className="text-lg" onClick={() => !user && setShowAuthModal(true)}>
                   Посмотреть ближайшие встречи
                 </Button>
                 <Button size="lg" variant="outline" className="text-lg">
@@ -150,6 +187,13 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      <AuthModal 
+        open={showAuthModal} 
+        onOpenChange={setShowAuthModal}
+        onSuccess={handleAuthSuccess}
+      />
+      <Toaster />
     </div>
   );
 };
