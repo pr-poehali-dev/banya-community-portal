@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "Get user providers without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "Unauthorized"
+      }
+    },
+    {
+      "name": "Link provider without auth",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "provider": "google",
+        "providerId": "123456",
+        "email": "test@gmail.com"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "Unauthorized"
+      }
+    }
+  ]
+}
