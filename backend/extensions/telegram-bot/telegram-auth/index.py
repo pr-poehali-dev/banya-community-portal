@@ -120,7 +120,7 @@ def find_user_by_telegram_id(cursor, telegram_id: str) -> Optional[dict]:
     """Find user by Telegram ID."""
     schema = get_schema()
     cursor.execute(f"""
-        SELECT id, email, name, avatar_url, telegram_id
+        SELECT id, email, full_name, avatar_url, telegram_id
         FROM {schema}users
         WHERE telegram_id = %s
     """, (telegram_id,))
@@ -163,20 +163,21 @@ def create_or_update_user(
         # Update existing user
         cursor.execute(f"""
             UPDATE {schema}users
-            SET name = COALESCE(%s, name),
+            SET full_name = COALESCE(%s, full_name),
                 avatar_url = COALESCE(%s, avatar_url),
                 last_login_at = NOW(),
                 updated_at = NOW()
             WHERE telegram_id = %s
-            RETURNING id, email, name, avatar_url, telegram_id
+            RETURNING id, email, full_name, avatar_url, telegram_id
         """, (display_name, photo_url, telegram_id))
     else:
         # Create new user
+        email_tg = f"telegram_{telegram_id}@sparkom.app"
         cursor.execute(f"""
-            INSERT INTO {schema}users (telegram_id, name, avatar_url, email_verified, password_hash, created_at, updated_at, last_login_at)
-            VALUES (%s, %s, %s, TRUE, '', NOW(), NOW(), NOW())
-            RETURNING id, email, name, avatar_url, telegram_id
-        """, (telegram_id, display_name, photo_url))
+            INSERT INTO {schema}users (telegram_id, full_name, email, avatar_url, email_verified, password_hash, created_at, updated_at, last_login_at)
+            VALUES (%s, %s, %s, %s, TRUE, '', NOW(), NOW(), NOW())
+            RETURNING id, email, full_name, avatar_url, telegram_id
+        """, (telegram_id, display_name, email_tg, photo_url))
 
     row = cursor.fetchone()
     return {
@@ -222,7 +223,7 @@ def get_user_by_id(cursor, user_id: int) -> Optional[dict]:
     """Get user by ID."""
     schema = get_schema()
     cursor.execute(f"""
-        SELECT id, email, name, avatar_url, telegram_id
+        SELECT id, email, full_name, avatar_url, telegram_id
         FROM {schema}users WHERE id = %s
     """, (user_id,))
 
