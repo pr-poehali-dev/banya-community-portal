@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { authService } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
-import { TelegramAuth } from '@/components/TelegramAuth';
+import { TelegramLoginButton } from '@/components/extensions/telegram-bot/TelegramLoginButton';
 
 interface AuthModalProps {
   open: boolean;
@@ -19,9 +19,10 @@ export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleTelegramSuccess = () => {
-    onOpenChange(false);
-    onSuccess();
+  const handleTelegramLogin = () => {
+    const botUsername = 'sparcom_auth_bot';
+    const url = `https://t.me/${botUsername}?start=web_auth`;
+    window.open(url, '_blank');
   };
 
   const [loginForm, setLoginForm] = useState({
@@ -101,7 +102,7 @@ export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <TelegramAuth onSuccess={handleTelegramSuccess} />
+          <TelegramLoginButton onClick={handleTelegramLogin} className="w-full" />
           
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
