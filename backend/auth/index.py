@@ -31,6 +31,8 @@ def handler(event: dict, context) -> dict:
             return register_user(event)
         elif path == 'login':
             return login_user(event)
+        elif path == 'telegram':
+            return telegram_login(event)
     elif method == 'GET':
         if path == 'verify':
             return verify_session(event)
@@ -321,5 +323,94 @@ def verify_session(event: dict) -> dict:
                 'Access-Control-Allow-Origin': '*'
             },
             'body': json.dumps({'error': f'Ошибка сервера: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+def telegram_login(event: dict) -> dict:
+    '''Авторизация через Telegram'''
+    try:
+        body = json.loads(event.get('body', '{}'))
+        telegram_id = str(body.get('id', ''))
+        first_name = body.get('first_name', '')
+        last_name = body.get('last_name', '')
+        username = body.get('username', '')
+        photo_url = body.get('photo_url', '')
+        
+        if not telegram_id:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'Telegram ID обязателен'}),
+                'isBase64Encoded': False
+            }
+        
+        full_name = f"{first_name} {last_name}".strip() or username or f"User {telegram_id}"
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id FROM users WHERE telegram_id = %s", (telegram_id,))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            user_id = existing_user['id']
+        else:
+            email = f"telegram_{telegram_id}@sparkom.app"
+            cursor.execute(
+                "INSERT INTO users (email, password_hash, full_name, telegram_id, avatar_url) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (email, '', full_name, telegram_id, photo_url if photo_url else None)
+            )
+            user_id = cursor.fetchone()['id']
+            
+            cursor.execute(
+                "INSERT INTO user_providers (user_id, provider, provider_user_id, provider_data) VALUES (%s, %s, %s, %s)",
+                (user_id, 'telegram', telegram_id, json.dumps({'username': username, 'first_name': first_name, 'last_name': last_name}))
+            )
+            conn.commit()
+        
+        token = generate_token()
+        expires_at = datetime.now() + timedelta(days=30)
+        
+        cursor.execute(
+            "INSERT INTO sessions (user_id, token, expires_at) VALUES (%s, %s, %s)",
+            (user_id, token, expires_at)
+        )
+        conn.commit()
+        
+        cursor.execute("SELECT id, email, full_name FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'message': 'Вход через Telegram успешен',
+                'token': token,
+                'user': {
+                    'id': user['id'],
+                    'email': user['email'],
+                    'full_name': user['full_name']
+                }
+            }),
+            'isBase64Encoded': False
+        }
+        
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({'error': f'Ошибка Telegram авторизации: {str(e)}'}),
             'isBase64Encoded': False
         }
