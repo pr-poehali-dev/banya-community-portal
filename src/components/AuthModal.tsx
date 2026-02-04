@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { authService } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
+import { TelegramAuth } from '@/components/TelegramAuth';
 
 interface AuthModalProps {
   open: boolean;
@@ -17,6 +18,11 @@ interface AuthModalProps {
 export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const handleTelegramSuccess = () => {
+    onOpenChange(false);
+    onSuccess();
+  };
 
   const [loginForm, setLoginForm] = useState({
     email: '',
@@ -93,6 +99,21 @@ export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
             Войдите или зарегистрируйтесь для записи на встречи
           </DialogDescription>
         </DialogHeader>
+
+        <div className="space-y-4">
+          <TelegramAuth onSuccess={handleTelegramSuccess} />
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                или
+              </span>
+            </div>
+          </div>
+        </div>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
