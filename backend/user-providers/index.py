@@ -1,10 +1,15 @@
 import json
 import os
 import psycopg2
+import jwt
 from typing import Optional
 
 def get_db_connection():
     return psycopg2.connect(os.environ['DATABASE_URL'])
+
+def get_schema() -> str:
+    schema = os.environ.get("MAIN_DB_SCHEMA", "public")
+    return f"{schema}." if schema else ""
 
 def handler(event: dict, context) -> dict:
     '''API для управления привязкой провайдеров авторизации к аккаунту пользователя'''
@@ -56,25 +61,24 @@ def handler(event: dict, context) -> dict:
     }
 
 def verify_token(token: str) -> Optional[int]:
-    conn = get_db_connection()
     try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT user_id FROM sessions WHERE token = %s AND expires_at > NOW()",
-                (token,)
-            )
-            result = cur.fetchone()
-            return result[0] if result else None
-    finally:
-        conn.close()
+        jwt_secret = os.environ.get('JWT_SECRET')
+        if not jwt_secret:
+            return None
+        
+        payload = jwt.decode(token, jwt_secret, algorithms=['HS256'])
+        return payload.get('user_id')
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None
 
 def get_user_providers(user_id: int) -> dict:
     conn = get_db_connection()
+    schema = get_schema()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                '''SELECT provider, provider_user_id, provider_email, linked_at 
-                   FROM user_providers 
+                f'''SELECT provider, provider_user_id, provider_email, linked_at 
+                   FROM {schema}user_providers 
                    WHERE user_id = %s 
                    ORDER BY linked_at DESC''',
                 (user_id,)
@@ -112,10 +116,11 @@ def link_provider(user_id: int, data: dict) -> dict:
         }
     
     conn = get_db_connection()
+    schema = get_schema()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                '''INSERT INTO user_providers 
+                f'''INSERT INTO {schema}user_providers 
                    (user_id, provider, provider_user_id, provider_email, provider_data) 
                    VALUES (%s, %s, %s, %s, %s)
                    ON CONFLICT (user_id, provider) 
@@ -152,10 +157,11 @@ def unlink_provider(user_id: int, provider: str) -> dict:
         }
     
     conn = get_db_connection()
+    schema = get_schema()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                'SELECT COUNT(*) FROM user_providers WHERE user_id = %s',
+                f'SELECT COUNT(*) FROM {schema}user_providers WHERE user_id = %s',
                 (user_id,)
             )
             count = cur.fetchone()[0]
@@ -168,7 +174,7 @@ def unlink_provider(user_id: int, provider: str) -> dict:
                 }
             
             cur.execute(
-                'SELECT id FROM user_providers WHERE user_id = %s AND provider = %s',
+                f'SELECT id FROM {schema}user_providers WHERE user_id = %s AND provider = %s',
                 (user_id, provider)
             )
             result = cur.fetchone()
@@ -181,7 +187,7 @@ def unlink_provider(user_id: int, provider: str) -> dict:
                 }
             
             provider_id = result[0]
-            cur.execute('UPDATE user_providers SET provider = NULL WHERE id = %s', (provider_id,))
+            cur.execute(f'DELETE FROM {schema}user_providers WHERE id = %s', (provider_id,))
             conn.commit()
             
             return {

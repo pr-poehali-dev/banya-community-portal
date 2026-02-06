@@ -110,4 +110,8 @@ export const authService = {
   saveUser(user: User) {
     localStorage.setItem('user', JSON.stringify(user));
   },
+
+  getToken(): string | null {
+    return localStorage.getItem('auth_token');
+  },
 };
