@@ -102,4 +102,12 @@ export const authService = {
   isAuthenticated(): boolean {
     return !!localStorage.getItem('auth_token');
   },
+
+  saveToken(token: string) {
+    localStorage.setItem('auth_token', token);
+  },
+
+  saveUser(user: User) {
+    localStorage.setItem('user', JSON.stringify(user));
+  },
 };
