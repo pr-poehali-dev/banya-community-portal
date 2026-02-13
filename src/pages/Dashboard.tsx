@@ -10,8 +10,12 @@ import { RolesSection } from '@/components/dashboard/RolesSection';
 import { MasterSection } from '@/components/dashboard/MasterSection';
 import { PartnerSection } from '@/components/dashboard/PartnerSection';
 import { AdminSection } from '@/components/dashboard/AdminSection';
-import { AuthModal } from '@/components/AuthModal';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/sonner';
+import { Toaster as ToasterUI } from '@/components/ui/toaster';
 
 type Tab = 'profile' | 'roles' | 'master' | 'partner' | 'admin';
 
@@ -20,8 +24,11 @@ export default function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('profile');
-  const [showAuth, setShowAuth] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
+  const [authLoading, setAuthLoading] = useState(false);
+  const { toast } = useToast();
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [registerForm, setRegisterForm] = useState({ email: '', password: '', full_name: '', phone: '' });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -63,6 +70,34 @@ export default function Dashboard() {
     );
   }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    try {
+      await authService.login(loginForm.email, loginForm.password);
+      toast({ title: 'Успешно!', description: 'Вы вошли в систему' });
+      handleAuthSuccess();
+    } catch (error) {
+      toast({ title: 'Ошибка', description: error instanceof Error ? error.message : 'Не удалось войти', variant: 'destructive' });
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    try {
+      await authService.register(registerForm.email, registerForm.password, registerForm.full_name, registerForm.phone);
+      toast({ title: 'Успешно!', description: 'Регистрация завершена' });
+      handleAuthSuccess();
+    } catch (error) {
+      toast({ title: 'Ошибка', description: error instanceof Error ? error.message : 'Не удалось зарегистрироваться', variant: 'destructive' });
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   if (!isAuthenticated || !dashboard) {
     return (
       <div className="min-h-screen bg-background">
@@ -75,21 +110,67 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div className="flex flex-col items-center justify-center px-4 py-24 text-center">
+        <div className="flex flex-col items-center justify-center px-4 py-12">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
             <Icon name="Lock" className="h-10 w-10 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Личный кабинет</h1>
-          <p className="text-muted-foreground mb-8 max-w-md">
-            Войдите или зарегистрируйтесь, чтобы управлять профилем, ролями и получить доступ к кабинету мастера или партнёра
+          <p className="text-muted-foreground mb-8 max-w-md text-center">
+            Войдите или зарегистрируйтесь, чтобы управлять профилем и получить доступ к кабинету
           </p>
-          <Button size="lg" onClick={() => setShowAuth(true)}>
-            <Icon name="LogIn" className="mr-2 h-5 w-5" />
-            Войти в аккаунт
-          </Button>
+
+          <div className="w-full max-w-sm">
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Вход</TabsTrigger>
+                <TabsTrigger value="register">Регистрация</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="login" className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="d-login-email">Email</Label>
+                    <Input id="d-login-email" type="email" placeholder="your@email.com" value={loginForm.email} onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="d-login-password">Пароль</Label>
+                    <Input id="d-login-password" type="password" placeholder="••••••" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} required />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={authLoading}>
+                    {authLoading ? <><Icon name="Loader2" className="mr-2 h-4 w-4 animate-spin" />Вход...</> : 'Войти'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="register" className="space-y-4">
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="d-reg-name">Полное имя</Label>
+                    <Input id="d-reg-name" type="text" placeholder="Иван Иванов" value={registerForm.full_name} onChange={(e) => setRegisterForm({ ...registerForm, full_name: e.target.value })} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="d-reg-email">Email</Label>
+                    <Input id="d-reg-email" type="email" placeholder="your@email.com" value={registerForm.email} onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="d-reg-phone">Телефон (необязательно)</Label>
+                    <Input id="d-reg-phone" type="tel" placeholder="+7 999 123-45-67" value={registerForm.phone} onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="d-reg-password">Пароль</Label>
+                    <Input id="d-reg-password" type="password" placeholder="••••••" value={registerForm.password} onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })} required minLength={6} />
+                    <p className="text-xs text-muted-foreground">Минимум 6 символов</p>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={authLoading}>
+                    {authLoading ? <><Icon name="Loader2" className="mr-2 h-4 w-4 animate-spin" />Регистрация...</> : 'Зарегистрироваться'}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
 
-        <AuthModal open={showAuth} onOpenChange={setShowAuth} onSuccess={handleAuthSuccess} />
+        <ToasterUI />
         <Toaster />
       </div>
     );
