@@ -30,6 +30,7 @@ const Index = () => {
   const handleAuthSuccess = () => {
     const currentUser = authService.getUser();
     setUser(currentUser);
+    window.location.href = '/dashboard';
   };
 
   const handleLogout = () => {
@@ -47,9 +48,9 @@ const Index = () => {
           {user ? (
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground hidden md:inline">{user.full_name}</span>
-              <Button variant="ghost" size="sm" onClick={() => window.location.href = '/settings'}>
-                <Icon name="Settings" className="mr-2 h-4 w-4" />
-                Настройки
+              <Button variant="ghost" size="sm" onClick={() => window.location.href = '/dashboard'}>
+                <Icon name="User" className="mr-2 h-4 w-4" />
+                Кабинет
               </Button>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 Выйти

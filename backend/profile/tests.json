@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Unauthorized access",
+      "method": "GET",
+      "path": "/?action=dashboard",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Unauthorized with invalid token",
+      "method": "GET",
+      "path": "/?action=unknown",
+      "expectedStatus": 401,
+      "headers": {"Authorization": "Bearer invalid-test-token"},
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
