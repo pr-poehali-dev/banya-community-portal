@@ -10,6 +10,7 @@ import { RolesSection } from '@/components/dashboard/RolesSection';
 import { MasterSection } from '@/components/dashboard/MasterSection';
 import { PartnerSection } from '@/components/dashboard/PartnerSection';
 import { AdminSection } from '@/components/dashboard/AdminSection';
+import { AuthModal } from '@/components/AuthModal';
 import { Toaster } from '@/components/ui/sonner';
 
 type Tab = 'profile' | 'roles' | 'master' | 'partner' | 'admin';
@@ -19,14 +20,16 @@ export default function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [showAuth, setShowAuth] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
 
   useEffect(() => {
-    if (!authService.isAuthenticated()) {
-      navigate('/');
+    if (!isAuthenticated) {
+      setLoading(false);
       return;
     }
     loadDashboard();
-  }, [navigate]);
+  }, [isAuthenticated]);
 
   const loadDashboard = async () => {
     try {
@@ -34,7 +37,7 @@ export default function Dashboard() {
       setDashboard(data);
     } catch {
       authService.logout();
-      navigate('/');
+      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
@@ -42,7 +45,14 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     authService.logout();
-    navigate('/');
+    setIsAuthenticated(false);
+    setDashboard(null);
+  };
+
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+    setLoading(true);
+    loadDashboard();
   };
 
   if (loading) {
@@ -53,7 +63,37 @@ export default function Dashboard() {
     );
   }
 
-  if (!dashboard) return null;
+  if (!isAuthenticated || !dashboard) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+          <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
+            <button onClick={() => navigate('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <Icon name="Flame" className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold text-foreground">СПАРКОМ</span>
+            </button>
+          </div>
+        </header>
+
+        <div className="flex flex-col items-center justify-center px-4 py-24 text-center">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <Icon name="Lock" className="h-10 w-10 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Личный кабинет</h1>
+          <p className="text-muted-foreground mb-8 max-w-md">
+            Войдите или зарегистрируйтесь, чтобы управлять профилем, ролями и получить доступ к кабинету мастера или партнёра
+          </p>
+          <Button size="lg" onClick={() => setShowAuth(true)}>
+            <Icon name="LogIn" className="mr-2 h-5 w-5" />
+            Войти в аккаунт
+          </Button>
+        </div>
+
+        <AuthModal open={showAuth} onOpenChange={setShowAuth} onSuccess={handleAuthSuccess} />
+        <Toaster />
+      </div>
+    );
+  }
 
   const { permissions } = dashboard;
 
