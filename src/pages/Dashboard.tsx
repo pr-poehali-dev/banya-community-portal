@@ -17,7 +17,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/sonner';
 import { Toaster as ToasterUI } from '@/components/ui/toaster';
 
-type Tab = 'profile' | 'roles' | 'master' | 'partner' | 'admin';
+import { LinkedAccountsSection } from '@/components/dashboard/LinkedAccountsSection';
+
+type Tab = 'profile' | 'roles' | 'accounts' | 'master' | 'partner' | 'admin';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -181,6 +183,7 @@ export default function Dashboard() {
   const tabs: { id: Tab; label: string; icon: string; show: boolean }[] = [
     { id: 'profile', label: 'Профиль', icon: 'User', show: true },
     { id: 'roles', label: 'Мои роли', icon: 'Shield', show: true },
+    { id: 'accounts', label: 'Привязанные аккаунты', icon: 'Link', show: true },
     { id: 'master', label: 'Кабинет мастера', icon: 'Award', show: permissions.is_master },
     { id: 'partner', label: 'Кабинет партнёра', icon: 'Building2', show: permissions.is_partner },
     { id: 'admin', label: 'Администрирование', icon: 'Settings', show: permissions.is_admin },
@@ -241,14 +244,6 @@ export default function Dashboard() {
               </nav>
 
               <Separator className="my-2" />
-
-              <button
-                onClick={() => navigate('/settings')}
-                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              >
-                <Icon name="Link" className="h-4 w-4" />
-                Привязанные аккаунты
-              </button>
             </div>
           </aside>
 
@@ -258,6 +253,9 @@ export default function Dashboard() {
             )}
             {activeTab === 'roles' && (
               <RolesSection dashboard={dashboard} onUpdate={loadDashboard} />
+            )}
+            {activeTab === 'accounts' && (
+              <LinkedAccountsSection />
             )}
             {activeTab === 'master' && permissions.is_master && (
               <MasterSection />
